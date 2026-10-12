@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emi Yazaki - Automated File Maintenance System (PHP & SQLite)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Marked.js for Markdown Preview -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            200: '#bae0fd',
+                            300: '#7cc8fc',
+                            400: '#36afef',
+                            500: '#0c93e4',
+                            600: '#0276c5',
+                            700: '#035ea0',
+                            800: '#075085',
+                            900: '#0c436e',
+                            950: '#082b49',
+                        },
+                        darkbg: '#090d16',
+                        darkcard: '#111827',
+                        darkborder: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.25);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.4);
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .light .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .prose-dark {
+            color: #cbd5e1;
+        }
+        .prose-dark h1, .prose-dark h2, .prose-dark h3 {
+            color: #f8fafc;
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose-dark p { margin-bottom: 0.75rem; }
+        .prose-dark code { background: #1e293b; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 font-sans antialiased h-full flex flex-col transition-colors duration-200">
+
+    <div id="app" class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col justify-between flex-shrink-0 border-r border-slate-800/80 z-20">
+            <div>
+                <!-- User Profile / App Header -->
+                <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-brand-500/20">
+                            EY
+                        </div>
+                        <div>
+                            <h1 class="text-sm font-semibold text-white tracking-wide leading-tight">Emi Yazaki</h1>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <p class="text-[10px] text-slate-400 font-mono">PHP 8.3 + SQLite BLOBs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="p-3 space-y-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-white bg-brand-600 shadow-lg shadow-brand-600/30">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>System Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('explorer')" id="nav-explorer" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900">
+                        <i data-lucide="folder-tree" class="w-4 h-4"></i>
+                        <span>00-99 Directory Explorer</span>
+                    </button>
+                    <button onclick="switchTab('inbox')" id="nav-inbox" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900 justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="inbox" class="w-4 h-4"></i>
+                            <span>Inbox Fast-Sorter</span>
+                        </div>
+                        <span id="inbox-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">0</span>
+                    </button>
+                    <button onclick="switchTab('namer')" id="nav-namer" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900">
+                        <i data-lucide="binary" class="w-4 h-4"></i>
+                        <span>Naming Standardizer</span>
+                    </button>
+                    <button onclick="switchTab('terminal')" id="nav-terminal" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900 justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="terminal" class="w-4 h-4"></i>
+                            <span>SQL DB Terminal</span>
+                        </div>
+                        <span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-800 text-slate-400">SQL</span>
+                    </button>
+                    <button onclick="switchTab('phpsource')" id="nav-phpsource" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900 justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="code-2" class="w-4 h-4"></i>
+                            <span>PHP & DB Source Code</span>
+                        </div>
+                        <span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">Code</span>
+                    </button>
+                    <button onclick="switchTab('backup')" id="nav-backup" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-900">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        <span>3-2-1 Health & Audit</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="p-3 border-t border-slate-800 space-y-2">
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 space-y-1.5">
+                    <div class="flex justify-between text-slate-300 font-medium">
+                        <span>Database Allocation</span>
+                        <span id="storage-percent" class="font-mono text-brand-400">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="storage-bar" class="bg-brand-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 text-right font-mono" id="storage-text">0 KB / SQLite Engine</p>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors" title="Toggle Theme">
+                        <i data-lucide="sun" id="theme-icon-light" class="w-4 h-4 hidden"></i>
+                        <i data-lucide="moon" id="theme-icon-dark" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="resetDatabase()" class="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 rounded-lg transition-colors flex items-center space-x-1">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                        <span>Reset DB</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-full bg-slate-900 overflow-hidden relative">
+            
+            <!-- Global Top Header -->
+            <header class="h-16 border-b border-slate-800 bg-slate-950/80 backdrop-blur px-6 flex items-center justify-between z-10">
+                <div class="flex items-center space-x-4">
+                    <h2 id="page-title" class="text-base font-bold text-slate-100 tracking-wide">System Dashboard</h2>
+                    <span id="page-subtitle" class="text-[11px] font-mono px-2.5 py-0.5 bg-slate-800 text-brand-400 rounded-full border border-slate-700">PHP REST API Connected</span>
+                </div>
+
+                <!-- Global Search & Direct Upload -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative w-64">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Search SQLite stored files..." class="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 focus:outline-none focus:border-brand-500 font-mono">
+                        <div id="search-results" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2"></div>
+                    </div>
+                    
+                    <button onclick="openNewFileModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-medium shadow-md transition-all">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>+ Upload to Database</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Main View Container -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="view-container">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <div id="view-dashboard" class="space-y-6">
+                    <!-- Quick Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="glass-panel p-4 rounded-2xl border border-slate-800 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-brand-500/10 text-brand-400 rounded-xl border border-brand-500/20">
+                                <i data-lucide="database" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">Stored DB Files</p>
+                                <h3 class="text-xl font-bold text-slate-100 font-mono" id="stat-file-count">0 Files</h3>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-slate-800 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                                <i data-lucide="inbox" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">05_Inbox Pending</p>
+                                <h3 class="text-xl font-bold text-slate-100 font-mono" id="stat-inbox-count">0 Files</h3>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-slate-800 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                                <i data-lucide="folder-tree" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">System Directories</p>
+                                <h3 class="text-xl font-bold text-slate-100 font-mono" id="stat-folder-count">6 Directories</h3>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-slate-800 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                                <i data-lucide="shield-check" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">SQLite Storage Health</p>
+                                <h3 class="text-xl font-bold text-emerald-400 font-mono">BLOBs Active</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Core System Navigation Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- 00-99 Directory Architecture Overview -->
+                        <div class="md:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <div>
+                                    <h3 class="font-bold text-slate-100 text-sm">00-99 Numerical Directory Hierarchy</h3>
+                                    <p class="text-xs text-slate-400">Active SQLite categories table mapped for Emi Yazaki</p>
+                                </div>
+                                <button onclick="switchTab('explorer')" class="text-xs text-brand-400 hover:underline font-mono">Open Explorer →</button>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="dash-directory-cards">
+                                <!-- Cards injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Maintenance Routine Checklist -->
+                        <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                                    <h3 class="font-bold text-slate-100 text-sm">Monthly Routine</h3>
+                                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20" id="checklist-progress">0/3</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mb-4">Emi's last Friday of the month file maintenance tasks</p>
+
+                                <div class="space-y-3 text-xs" id="dash-checklist">
+                                    <!-- Injected via JS -->
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-800 mt-4">
+                                <button onclick="switchTab('backup')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium transition-colors flex items-center justify-center space-x-2">
+                                    <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+                                    <span>Run DB Backup & Audit</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. DIRECTORY MANAGER VIEW -->
+                <div id="view-explorer" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)]">
+                        
+                        <!-- Left: Visual Folder Tree -->
+                        <div class="lg:col-span-4 glass-panel rounded-2xl border border-slate-800 p-4 flex flex-col h-full overflow-hidden">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">SQLite Directory Hierarchy</span>
+                                <button onclick="openNewFolderModal()" class="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition-colors" title="Create Subdirectory">
+                                    <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs font-mono" id="directory-tree-root">
+                                <!-- Tree view injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Right: File Table -->
+                        <div class="lg:col-span-8 glass-panel rounded-2xl border border-slate-800 p-5 flex flex-col h-full overflow-hidden">
+                            
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                                <div class="flex items-center space-x-2 text-xs font-mono text-slate-300" id="explorer-breadcrumbs">
+                                    <!-- Breadcrumbs injected via JS -->
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="openNewFileModal()" class="px-3 py-1.5 bg-brand-600 text-white rounded-xl text-xs font-medium hover:bg-brand-500 transition-colors flex items-center space-x-1">
+                                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                        <span>Upload File into DB</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="text-slate-400 uppercase font-mono border-b border-slate-800 sticky top-0 bg-slate-950/90 backdrop-blur">
+                                        <tr>
+                                            <th class="pb-2 font-medium">Filename (Stored in DB)</th>
+                                            <th class="pb-2 font-medium">Tags</th>
+                                            <th class="pb-2 font-medium">Size</th>
+                                            <th class="pb-2 font-medium">Modified</th>
+                                            <th class="pb-2 font-medium text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="explorer-file-list" class="divide-y divide-slate-800/60 font-mono">
+                                        <!-- File rows injected here -->
+                                    </tbody>
+                                </table>
+                                <div id="explorer-empty-state" class="hidden py-12 text-center text-slate-500">
+                                    <i data-lucide="folder-open" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                                    <p>No stored files found in this directory.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 3. INBOX FAST-SORTER VIEW -->
+                <div id="view-inbox" class="hidden space-y-6">
+                    <div class="flex items-center justify-between bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-amber-300">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="inbox" class="w-6 h-6 flex-shrink-0"></i>
+                            <div>
+                                <h3 class="font-bold text-sm">Inbox Landing Zone (05_Inbox_Temp)</h3>
+                                <p class="text-xs text-amber-400/80">Incoming uploads and downloads. Purpose: Sort & empty weekly into target folders.</p>
+                            </div>
+                        </div>
+                        <button onclick="triggerSimulatedDownload()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-medium transition-colors shadow-sm">
+                            + Generate Sample File in DB
+                        </button>
+                    </div>
+
+                    <!-- Drag & Drop Area -->
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-800 rounded-2xl p-6 text-center hover:border-brand-500 transition-colors cursor-pointer bg-slate-900/40">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto mb-2 text-slate-500"></i>
+                        <p class="text-xs font-medium text-slate-300">Drag files here to store binary payload directly in <span class="font-mono text-brand-400">05_Inbox_Temp</span> SQLite table</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Files convert to Base64/Data URLs and store inside local database</p>
+                        <input type="file" id="file-input-upload" class="hidden" multiple onchange="handleFileUpload(event)">
+                    </div>
+
+                    <!-- Inbox Sorting Stack -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>Pending Unsorted Queue (<span id="inbox-count-head" class="font-mono text-brand-400">0</span>)</span>
+                            <button onclick="clearAllInbox()" class="text-rose-400 hover:underline">Clear Inbox</button>
+                        </div>
+
+                        <div id="inbox-items-container" class="space-y-3">
+                            <!-- Dynamic Cards -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. FILE NAMING STANDARDIZER VIEW -->
+                <div id="view-namer" class="hidden space-y-6 max-w-4xl mx-auto">
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-6">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-100 flex items-center space-x-2">
+                                <i data-lucide="binary" class="w-5 h-5 text-brand-400"></i>
+                                <span>File Naming Standardizer Engine</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1">Applies Emi Yazaki's strict rule: <code class="text-brand-400 font-mono">YYYY-MM-DD_Project_Description_vX.X</code></p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Date Stamp (YYYY-MM-DD)</label>
+                                <input type="date" id="namer-date" oninput="updateNamerPreview()" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Project Name (PascalCase)</label>
+                                <input type="text" id="namer-project" placeholder="e.g. BrandRedesign" oninput="updateNamerPreview()" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Description / Category</label>
+                                <input type="text" id="namer-desc" placeholder="e.g. ClientContract" oninput="updateNamerPreview()" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Version</label>
+                                    <input type="text" id="namer-version" value="1.0" oninput="updateNamerPreview()" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Extension</label>
+                                    <select id="namer-ext" onchange="updateNamerPreview()" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+                                        <option value=".pdf">.pdf</option>
+                                        <option value=".docx">.docx</option>
+                                        <option value=".xlsx">.xlsx</option>
+                                        <option value=".png">.png</option>
+                                        <option value=".md">.md</option>
+                                        <option value=".sql">.sql</option>
+                                        <option value=".txt">.txt</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Standardized Result -->
+                        <div class="p-4 rounded-xl bg-slate-950 text-slate-100 border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-slate-500 uppercase font-mono">Generated Output</span>
+                                <span class="text-[10px] text-emerald-400 font-mono">Regex Passed ✓</span>
+                            </div>
+                            <p id="namer-output" class="font-mono text-sm font-semibold text-brand-400 break-all select-all">YYYY-MM-DD_Project_Description_v1.0.pdf</p>
+                            
+                            <div class="flex items-center space-x-2 pt-2">
+                                <button onclick="copyToClipboard(document.getElementById('namer-output').innerText)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    <span>Copy String</span>
+                                </button>
+                                <button onclick="openNewFileModalWithStandard()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                    <span>Upload Binary with this Name</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SQL DB TERMINAL SANDBOX -->
+                <div id="view-terminal" class="hidden space-y-6">
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                                    <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
+                                    <span>In-Browser SQLite Query Terminal</span>
+                                </h3>
+                                <p class="text-xs text-slate-400">Execute direct SQL statements against Emi's active SQLite schema</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="setQueryPreset('SELECT id, category_id, filename, mime_type, size_kb, SUBSTR(file_data, 1, 30) AS data_head FROM files ORDER BY id DESC;')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300 rounded-lg">Select Files with BLOB data</button>
+                                <button onclick="setQueryPreset('SELECT c.name, COUNT(f.id) as total_files FROM categories c LEFT JOIN files f ON c.id = f.category_id GROUP BY c.id;')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300 rounded-lg">Category File Counts</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <textarea id="sql-query-input" rows="3" class="w-full p-3 font-mono text-xs bg-slate-950 border border-slate-800 rounded-xl text-brand-300 focus:outline-none focus:border-brand-500" placeholder="SELECT * FROM files WHERE category_id = 1;"></textarea>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-500 font-mono">Tables available: <code class="text-slate-400">files, categories, backup_logs, maintenance_tasks</code></span>
+                                <button onclick="executeUserSQL()" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-mono font-medium transition-colors flex items-center space-x-1.5">
+                                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                    <span>Execute Query</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Query Results Table -->
+                        <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60 p-3">
+                            <div class="flex justify-between items-center text-[10px] font-mono text-slate-400 mb-2 border-b border-slate-800 pb-1">
+                                <span>Execution Result</span>
+                                <span id="sql-exec-time">0 ms</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-64">
+                                <table class="w-full text-left text-xs font-mono">
+                                    <thead id="sql-table-head" class="text-slate-400 uppercase border-b border-slate-800 bg-slate-900">
+                                        <!-- Dynamic Head -->
+                                    </thead>
+                                    <tbody id="sql-table-body" class="divide-y divide-slate-800 text-slate-300">
+                                        <!-- Dynamic Body -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. PHP & DB SOURCE CODE EXPLORER -->
+                <div id="view-phpsource" class="hidden space-y-6">
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                                    <i data-lucide="code-2" class="w-4 h-4 text-brand-400"></i>
+                                    <span>Complete PHP & SQLite Backend Source Architecture</span>
+                                </h3>
+                                <p class="text-xs text-slate-400">Deployable production PHP files showing PDO Binary BLOB uploads & downloads</p>
+                            </div>
+                            <button onclick="copyToClipboard(document.getElementById('code-display').innerText)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-mono transition-colors flex items-center space-x-1">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>Copy Current File</span>
+                            </button>
+                        </div>
+
+                        <!-- Source File Selector Tabs -->
+                        <div class="flex space-x-2 overflow-x-auto pb-1 border-b border-slate-800 text-xs font-mono">
+                            <button onclick="loadPHPCodeView('schema')" id="code-tab-schema" class="px-3 py-1.5 rounded-lg bg-brand-600 text-white font-medium">schema.sql</button>
+                            <button onclick="loadPHPCodeView('db')" id="code-tab-db" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200">db.php</button>
+                            <button onclick="loadPHPCodeView('upload')" id="code-tab-upload" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200">api/upload.php</button>
+                            <button onclick="loadPHPCodeView('download')" id="code-tab-download" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200">api/download.php</button>
+                            <button onclick="loadPHPCodeView('files')" id="code-tab-files" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200">api/files.php</button>
+                        </div>
+
+                        <!-- Code Editor Container -->
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-x-auto font-mono text-xs leading-relaxed text-slate-200" style="max-height: 500px;">
+                            <pre id="code-display" class="whitespace-pre"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. 3-2-1 HEALTH & AUDIT DASHBOARD -->
+                <div id="view-backup" class="hidden space-y-6">
+                    <!-- Redundancy Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        <!-- Primary Drive -->
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800 shadow-sm space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                        <i data-lucide="hard-drive" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-xs">1. Primary Working Drive</h4>
+                                        <p class="text-[10px] text-slate-500 font-mono">SQLite Local DB</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 rounded font-semibold font-mono">Active</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Binary payloads written directly into SQLite local database table.</p>
+                            <div class="pt-2 text-[10px] text-slate-500 border-t border-slate-800 flex justify-between font-mono">
+                                <span>Engine: SQLite3</span>
+                                <span>Status: BLOB Ready</span>
+                            </div>
+                        </div>
+
+                        <!-- Cloud Sync -->
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800 shadow-sm space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="p-2 rounded-lg bg-brand-500/10 text-brand-400">
+                                        <i data-lucide="cloud" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-xs">2. Cloud Mirror</h4>
+                                        <p class="text-[10px] text-slate-500 font-mono">Automated Cloud Sync</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] bg-brand-500/20 text-brand-400 rounded font-semibold font-mono">Synced</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Continuous cloud replication across secondary devices.</p>
+                            <div class="pt-2 text-[10px] text-slate-500 border-t border-slate-800 flex justify-between font-mono">
+                                <span>Sync Frequency: Live</span>
+                                <span>Encrypted</span>
+                            </div>
+                        </div>
+
+                        <!-- Cold Vault Snapshot -->
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800 shadow-sm space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                                        <i data-lucide="shield" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-xs">3. Offsite SQL Dump</h4>
+                                        <p class="text-[10px] text-slate-500 font-mono">Encrypted Cold Snapshot</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] bg-purple-500/20 text-purple-400 rounded font-semibold font-mono" id="cold-vault-status">Ready</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Encrypted offsite database dump with binary data strings.</p>
+                            <div class="pt-2 text-[10px] text-slate-500 border-t border-slate-800 flex justify-between font-mono">
+                                <span>Dump SQL Export</span>
+                                <button onclick="triggerDatabaseDump()" class="text-purple-400 hover:underline">Dump Database SQL</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Export and DB Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                            <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                                <i data-lucide="database" class="w-4 h-4 text-brand-400"></i>
+                                <span>Database Export & SQL Backup</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Generate an immediate `.sql` backup file containing all SQLite tables and binary file data strings.</p>
+
+                            <div class="space-y-3 pt-2">
+                                <button onclick="downloadSQLDump()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-mono font-medium transition-colors flex items-center justify-center space-x-2 border border-slate-700">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    <span>Download Full SQLite .SQL Dump</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                            <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                                <i data-lucide="list-checks" class="w-4 h-4 text-brand-400"></i>
+                                <span>System Audit Logs</span>
+                            </h3>
+                            <div class="space-y-2 text-xs font-mono max-h-40 overflow-y-auto" id="backup-audit-logs">
+                                <!-- Dynamic logs -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- File Previewer Modal (In-Database Viewer & Downloader) -->
+    <div id="modal-preview" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
+                <div class="flex items-center space-x-3 truncate">
+                    <div class="p-2 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20 flex-shrink-0">
+                        <i data-lucide="file-text" id="preview-modal-icon" class="w-5 h-5"></i>
+                    </div>
+                    <div class="truncate">
+                        <h3 class="font-bold text-sm text-slate-100 font-mono truncate" id="preview-modal-title">Filename.pdf</h3>
+                        <p class="text-[10px] text-slate-400 font-mono" id="preview-modal-meta">Size: 0 KB • Stored in SQLite Database</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-modal-download" onclick="" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-xl shadow-md transition-all flex items-center space-x-1.5 font-mono">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Download From DB</span>
+                    </button>
+                    <button onclick="closeModal('modal-preview')" class="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content Area -->
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-950/50 flex flex-col items-center justify-center" id="preview-modal-body">
+                <!-- Dynamic Content (Img, Text, Code, iframe PDF, or Fallback) -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center text-[10px] font-mono text-slate-500">
+                <span id="preview-modal-mime">MIME Type: application/pdf</span>
+                <span>Storage Engine: SQLite Data URL</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- New File Upload Modal -->
+    <div id="modal-file" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-slate-100">Upload File to SQLite Database</h3>
+                <button onclick="closeModal('modal-file')" class="text-slate-400 hover:text-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Target Folder</label>
+                    <select id="modal-file-folder" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono">
+                        <!-- Injected -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Select Local File</label>
+                    <input type="file" id="modal-file-binary" onchange="onFilePickedForUpload(event)" class="w-full text-slate-400 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer bg-slate-950 rounded-xl p-1 border border-slate-800">
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Standardized Filename in Database</label>
+                    <input type="text" id="modal-file-name" placeholder="2026-10-12_Project_Doc_v1.0.pdf" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono">
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Tags (comma-separated)</label>
+                    <input type="text" id="modal-file-tags" placeholder="urgent, contract, invoice" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button onclick="closeModal('modal-file')" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-xl">Cancel</button>
+                <button onclick="saveNewUploadedFile()" class="px-3.5 py-1.5 text-xs bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl shadow-sm flex items-center space-x-1">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Store File in DB</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Subcategory Modal -->
+    <div id="modal-folder" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-slate-100">Create Subcategory</h3>
+                <button onclick="closeModal('modal-folder')" class="text-slate-400 hover:text-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Parent Directory</label>
+                    <select id="modal-folder-parent" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono">
+                        <!-- Dynamic Options -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1 text-slate-300">Category Name</label>
+                    <input type="text" id="modal-folder-name" placeholder="e.g. Design_Assets or 2026_Q4" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button onclick="closeModal('modal-folder')" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-xl">Cancel</button>
+                <button onclick="saveNewFolder()" class="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl shadow-sm">Create Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 translate-y-10 opacity-0 transition-all duration-300 bg-slate-950 text-slate-100 border border-slate-800 px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-mono">
+        <i data-lucide="info" class="w-4 h-4 text-brand-400" id="toast-icon"></i>
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <script>
+        // Preset PHP & SQL code contents showing PDO PARAM_LOB binary handling
+        const PHP_SOURCE_CODE = {
+            schema: `-- SQL DDL Schema for Emi Yazaki File Maintenance System (Binary Storage Enabled)
+CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    parent_id INTEGER DEFAULT NULL,
+    icon TEXT DEFAULT 'folder',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    mime_type TEXT DEFAULT 'application/octet-stream',
+    size_kb INTEGER DEFAULT 0,
+    tags TEXT,
+    file_data BLOB, -- Holds Binary File Contents or Base64 Data String
+    modified_date DATE DEFAULT (DATE('now')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS backup_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    status TEXT NOT NULL,
+    log_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);`,
+            db: `<?php
+// db.php - Database connection helper using PHP PDO SQLite with Binary LOB support
+class Database {
+    private static $pdo = null;
+
+    public static function connect() {
+        if (self::$pdo === null) {
+            try {
+                $dbPath = __DIR__ . '/file_maintenance.sqlite';
+                self::$pdo = new PDO("sqlite:" . $dbPath);
+                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                self::$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                die(json_encode(["error" => "Database Connection Failed: " . $e->getMessage()]));
+            }
+        }
+        return self::$pdo;
+    }
+}`,
+            upload: `<?php
+// api/upload.php - Upload Binary Files into SQLite Database BLOB
+header("Content-Type: application/json");
+require_once __DIR__ . '/../db.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode(["error" => "No valid file uploaded."]);
+        exit;
+    }
+
+    $file = $_FILES['file'];
+    $category_id = $_POST['category_id'] ?? 5; // Default to 05_Inbox_Temp
+    $filename = $_POST['filename'] ?? $file['name'];
+    $tags = $_POST['tags'] ?? 'upload';
+    $mime_type = $file['type'] ?: 'application/octet-stream';
+    $size_kb = round($file['size'] / 1024);
+
+    // Read binary file stream into binary buffer
+    $fileData = file_get_contents($file['tmp_name']);
+
+    $pdo = Database::connect();
+    $sql = "INSERT INTO files (category_id, filename, mime_type, size_kb, tags, file_data) VALUES (?, ?, ?, ?, ?, ?)";
+    $stmt = $pdo->prepare($sql);
+    
+    // Bind binary parameter
+    $stmt->bindParam(1, $category_id);
+    $stmt->bindParam(2, $filename);
+    $stmt->bindParam(3, $mime_type);
+    $stmt->bindParam(4, $size_kb);
+    $stmt->bindParam(5, $tags);
+    $stmt->bindParam(6, $fileData, PDO::PARAM_LOB);
+
+    if ($stmt->execute()) {
+        echo json_encode([
+            "status" => "success",
+            "message" => "File stored inside SQLite database successfully!",
+            "id" => $pdo->lastInsertId()
+        ]);
+    }
+}`,
+            download: `<?php
+// api/download.php - Retrieve Binary BLOB from SQLite and Stream to Browser
+require_once __DIR__ . '/../db.php';
+
+$file_id = $_GET['id'] ?? null;
+if (!$file_id) {
+    die("File ID required.");
+}
+
+$pdo = Database::connect();
+$stmt = $pdo->prepare("SELECT filename, mime_type, file_data FROM files WHERE id = ?");
+$stmt->execute([$file_id]);
+$file = $stmt->fetch();
+
+if (!$file || empty($file['file_data'])) {
+    die("File not found or payload empty.");
+}
+
+// Set binary response headers for direct browser download
+header('Content-Type: ' . $file['mime_type']);
+header('Content-Disposition: attachment; filename="' . basename($file['filename']) . '"');
+header('Content-Length: ' . strlen($file['file_data']));
+
+// Output binary stream directly to user
+echo $file['file_data'];
+exit;`,
+            files: `<?php
+// api/files.php - Get list of stored files (excluding heavy binary payload for speed)
+header("Content-Type: application/json");
+require_once __DIR__ . '/../db.php';
+
+$pdo = Database::connect();
+$catId = $_GET['category_id'] ?? null;
+
+if ($catId) {
+    $stmt = $pdo->prepare("SELECT id, category_id, filename, mime_type, size_kb, tags, modified_date FROM files WHERE category_id = ? ORDER BY id DESC");
+    $stmt->execute([$catId]);
+} else {
+    $stmt = $pdo->query("SELECT id, category_id, filename, mime_type, size_kb, tags, modified_date FROM files ORDER BY id DESC");
+}
+
+echo json_encode($stmt->fetchAll());`
+        };
+
+        // Default Initial Database State with Real Sample Binary / Data Content
+        const INITIAL_DB_STATE = {
+            activeCategoryId: 1,
+            categories: [
+                { id: 1, name: "01_Active_Projects", description: "Current client work, active writing & design sprints.", icon: "folder-kanban", parent_id: null },
+                { id: 2, name: "02_Resources_Reference", description: "Reusable templates, research, style guides.", icon: "book-open", parent_id: null },
+                { id: 3, name: "03_Finances_Admin", description: "Invoices, receipts, tax files & legal contracts.", icon: "receipt", parent_id: null },
+                { id: 4, name: "04_Personal_Archive", description: "Journals, personal media & historical portfolio.", icon: "archive", parent_id: null },
+                { id: 5, name: "05_Inbox_Temp", description: "Temporary landing zone for downloads & raw assets.", icon: "inbox", parent_id: null },
+                { id: 6, name: "_Archive", description: "Historical completed quarterly records.", icon: "box", parent_id: null },
+                
+                // Subdirectories
+                { id: 7, name: "BrandRedesign_2026", description: "Active branding files", icon: "folder", parent_id: 1 },
+                { id: 8, name: "StyleGuides", description: "Typography & colors", icon: "folder", parent_id: 2 }
+            ],
+            files: [
+                {
+                    id: 101,
+                    category_id: 7,
+                    filename: "2026-10-01_BrandRedesign_ProjectOverview_v1.0.md",
+                    mime_type: "text/markdown",
+                    size_kb: 4,
+                    tags: "overview,md,active",
+                    modified_date: "2026-10-01",
+                    file_data: "data:text/markdown;base64," + btoa("# Brand Redesign Project Overview\n\nWelcome Emi! This file is **stored directly inside the SQLite Database** as a binary string payload.\n\n### Key Deliverables\n- Standardized File Naming\n- Automated 3-2-1 Backups\n- Binary File Blob Previews & Downloads")
+                },
+                {
+                    id: 102,
+                    category_id: 7,
+                    filename: "2026-10-05_BrandRedesign_ColorPalette_v1.0.png",
+                    mime_type: "image/svg+xml",
+                    size_kb: 12,
+                    tags: "design,svg,image",
+                    modified_date: "2026-10-05",
+                    file_data: "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect width="400" height="200" fill="#090d16"/><rect x="20" y="40" width="80" height="120" rx="12" fill="#0c93e4"/><rect x="110" y="40" width="80" height="120" rx="12" fill="#6366f1"/><rect x="200" y="40" width="80" height="120" rx="12" fill="#a855f7"/><rect x="290" y="40" width="80" height="120" rx="12" fill="#10b981"/><text x="200" y="185" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">SQLite Stored Image Vector - Emi Yazaki</text></svg>')
+                },
+                {
+                    id: 103,
+                    category_id: 8,
+                    filename: "2026-01-15_StyleGuide_Config_v1.0.json",
+                    mime_type: "application/json",
+                    size_kb: 2,
+                    tags: "config,json",
+                    modified_date: "2026-01-15",
+                    file_data: "data:application/json;base64," + btoa('{\n  "system": "Emi Yazaki Maintenance Engine",\n  "version": "1.0",\n  "theme": "Dark Plus",\n  "database": "SQLite3 Binary Payload Enabled"\n}')
+                },
+                {
+                    id: 104,
+                    category_id: 5,
+                    filename: "Unsorted_Notes_2026.txt",
+                    mime_type: "text/plain",
+                    size_kb: 1,
+                    tags: "inbox,temp",
+                    modified_date: "2026-10-12",
+                    file_data: "data:text/plain;base64," + btoa("Temp note sitting in 05_Inbox_Temp folder. Please move me to a target category using the Inbox Fast-Sorter.")
+                }
+            ],
+            checklist: [
+                { id: "chk_1", text: "Clear the Inbox (Empty 05_Inbox_Temp)", done: false },
+                { id: "chk_2", text: "Check Backups (Verify Cloud & SQLite Dump Sync)", done: true },
+                { id: "chk_3", text: "Link & Tag (Update database indexes & standardize filenames)", done: false }
+            ],
+            backup_logs: [
+                { id: 1, action: "SYSTEM_INIT", status: "SUCCESS", log_time: "2026-10-12 10:00:00" }
+            ]
+        };
+
+        // App state
+        let dbState = JSON.parse(localStorage.getItem("emi_sqlite_db_state")) || INITIAL_DB_STATE;
+        let tempUploadFileData = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            saveDBState();
+            lucide.createIcons();
+            setDefaultNamerDate();
+            renderAll();
+            setupDragAndDrop();
+            loadPHPCodeView('schema');
+        });
+
+        function saveDBState() {
+            try {
+                localStorage.setItem("emi_sqlite_db_state", JSON.stringify(dbState));
+            } catch(e) {
+                showToast("Storage quota limit reached. Try removing large files.");
+            }
+        }
+
+        function resetDatabase() {
+            if(confirm("Re-initialize SQLite database to default schema and seed data?")) {
+                dbState = JSON.parse(JSON.stringify(INITIAL_DB_STATE));
+                saveDBState();
+                renderAll();
+                showToast("SQLite database re-initialized.");
+            }
+        }
+
+        // View Router
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'explorer', 'inbox', 'namer', 'terminal', 'phpsource', 'backup'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`view-${t}`);
+                if(el) el.classList.add('hidden');
+                const btn = document.getElementById(`nav-${t}`);
+                if(btn) {
+                    btn.classList.remove('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-600/30');
+                    btn.classList.add('text-slate-400', 'hover:text-slate-100');
+                }
+            });
+
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-600/30');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            const titles = {
+                dashboard: ["System Dashboard", "PHP REST API Connected"],
+                explorer: ["00-99 Directory Explorer", "SQLite Category Mapped"],
+                inbox: ["Inbox Fast-Sorter", "05_Inbox_Temp Queue"],
+                namer: ["Naming Standardizer", "Rule-based Engine"],
+                terminal: ["SQL DB Terminal", "In-Browser SQLite Engine"],
+                phpsource: ["PHP & DB Source Code", "Production Server Code"],
+                backup: ["3-2-1 Health & Audit", "SQLite Dump Engine"]
+            };
+
+            document.getElementById("page-title").innerText = titles[tabId][0];
+            document.getElementById("page-subtitle").innerText = titles[tabId][1];
+
+            renderAll();
+        }
+
+        // Render Trigger
+        function renderAll() {
+            renderStats();
+            renderDashboardCards();
+            renderChecklists();
+            renderDirectoryTree();
+            renderExplorerFiles();
+            renderInboxSorter();
+            renderBackupAuditLogs();
+            updateNamerPreview();
+            lucide.createIcons();
+        }
+
+        function renderStats() {
+            const fileCount = dbState.files.length;
+            const inboxCount = dbState.files.filter(f => f.category_id === 5).length;
+            const totalKB = dbState.files.reduce((sum, f) => sum + f.size_kb, 0);
+
+            document.getElementById("stat-file-count").innerText = `${fileCount} Files`;
+            document.getElementById("stat-inbox-count").innerText = `${inboxCount} Files`;
+            document.getElementById("inbox-badge").innerText = inboxCount;
+            document.getElementById("inbox-count-head").innerText = inboxCount;
+
+            const maxKB = 15000;
+            const percent = Math.min(100, ((totalKB / maxKB) * 100)).toFixed(1);
+
+            document.getElementById("storage-percent").innerText = `${percent}%`;
+            document.getElementById("storage-bar").style.width = `${percent}%`;
+            document.getElementById("storage-text").innerText = `${totalKB} KB / SQLite Allocated`;
+        }
+
+        function renderDashboardCards() {
+            const container = document.getElementById("dash-directory-cards");
+            container.innerHTML = "";
+
+            const mainCategories = dbState.categories.filter(c => c.parent_id === null);
+            mainCategories.forEach(cat => {
+                const count = dbState.files.filter(f => f.category_id === cat.id).length;
+                const card = document.createElement("div");
+                card.className = "p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between hover:border-brand-500/50 transition-all cursor-pointer";
+                card.onclick = () => {
+                    dbState.activeCategoryId = cat.id;
+                    switchTab('explorer');
+                };
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-lg bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                            <i data-lucide="${cat.icon || 'folder'}" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-slate-200">${cat.name}</h4>
+                            <p class="text-[10px] text-slate-400 line-clamp-1">${cat.description}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-brand-400 border border-slate-700">${count}</span>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderChecklists() {
+            const dashBox = document.getElementById("dash-checklist");
+            dashBox.innerHTML = "";
+
+            let completed = 0;
+
+            dbState.checklist.forEach(item => {
+                if(item.done) completed++;
+
+                const dRow = document.createElement("label");
+                dRow.className = "flex items-center space-x-2.5 cursor-pointer text-slate-300";
+                dRow.innerHTML = `
+                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChecklist('${item.id}')" class="rounded border-slate-700 text-brand-600 focus:ring-brand-500 bg-slate-900">
+                    <span class="${item.done ? 'line-through text-slate-500' : ''}">${item.text}</span>
+                `;
+                dashBox.appendChild(dRow);
+            });
+
+            document.getElementById("checklist-progress").innerText = `${completed}/${dbState.checklist.length}`;
+        }
+
+        function toggleChecklist(id) {
+            const item = dbState.checklist.find(c => c.id === id);
+            if(item) {
+                item.done = !item.done;
+                saveDBState();
+                renderAll();
+            }
+        }
+
+        function renderDirectoryTree() {
+            const container = document.getElementById("directory-tree-root");
+            container.innerHTML = "";
+
+            function buildBranch(parentId, level = 0) {
+                const subCats = dbState.categories.filter(c => c.parent_id === parentId);
+                subCats.forEach(cat => {
+                    const isActive = dbState.activeCategoryId === cat.id;
+                    const count = dbState.files.filter(f => f.category_id === cat.id).length;
+
+                    const div = document.createElement("div");
+                    div.className = `flex items-center justify-between px-2.5 py-1.5 rounded-xl cursor-pointer transition-colors ${isActive ? 'bg-brand-500/15 text-brand-400 font-semibold border border-brand-500/30' : 'hover:bg-slate-900 text-slate-300'}`;
+                    div.style.paddingLeft = `${level * 16 + 10}px`;
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        dbState.activeCategoryId = cat.id;
+                        renderAll();
+                    };
+
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-2 truncate">
+                            <i data-lucide="${isActive ? 'folder-open' : 'folder'}" class="w-3.5 h-3.5 flex-shrink-0 text-brand-400"></i>
+                            <span class="truncate">${cat.name}</span>
+                        </div>
+                        <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${count}</span>
+                    `;
+                    container.appendChild(div);
+
+                    buildBranch(cat.id, level + 1);
+                });
+            }
+
+            buildBranch(null);
+        }
+
+        function renderExplorerFiles() {
+            const currentCat = dbState.categories.find(c => c.id === dbState.activeCategoryId) || dbState.categories[0];
+            
+            const breadcrumbBox = document.getElementById("explorer-breadcrumbs");
+            breadcrumbBox.innerHTML = `
+                <i data-lucide="folder" class="w-3.5 h-3.5 text-brand-400"></i>
+                <span>${currentCat.name}</span>
+            `;
+
+            const fileList = document.getElementById("explorer-file-list");
+            const emptyState = document.getElementById("explorer-empty-state");
+            fileList.innerHTML = "";
+
+            const catFiles = dbState.files.filter(f => f.category_id === currentCat.id);
+
+            if(catFiles.length === 0) {
+                emptyState.classList.remove("hidden");
+            } else {
+                emptyState.classList.add("hidden");
+                catFiles.forEach(file => {
+                    const tr = document.createElement("tr");
+                    tr.className = "hover:bg-slate-900/60 transition-colors";
+
+                    const tagsArr = (file.tags || "").split(",").filter(Boolean);
+                    const tagsHtml = tagsArr.map(t => `<span class="px-1.5 py-0.5 bg-slate-800 text-brand-300 rounded text-[10px] mr-1">#${t}</span>`).join("");
+
+                    const hasData = Boolean(file.file_data);
+
+                    tr.innerHTML = `
+                        <td class="py-2.5 font-medium text-slate-200 flex items-center space-x-2">
+                            <i data-lucide="${getFileIcon(file.filename)}" class="w-3.5 h-3.5 text-brand-400 flex-shrink-0"></i>
+                            <span class="truncate max-w-xs cursor-pointer hover:text-brand-400 hover:underline" onclick="previewFileFromDB(${file.id})" title="Click to Preview">${file.filename}</span>
+                            ${hasData ? '<span class="px-1 py-0.2 text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-mono">BLOB</span>' : ''}
+                        </td>
+                        <td class="py-2.5">${tagsHtml || '-'}</td>
+                        <td class="py-2.5 text-slate-400">${file.size_kb} KB</td>
+                        <td class="py-2.5 text-slate-400">${file.modified_date}</td>
+                        <td class="py-2.5 text-right space-x-1">
+                            <button onclick="previewFileFromDB(${file.id})" class="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-brand-400" title="View / Preview File">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="downloadFileFromDB(${file.id})" class="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400" title="Download File from SQLite DB">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="copyToClipboard('${file.filename}')" class="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200" title="Copy Filename">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteFileRecord(${file.id})" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Delete Database Record">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </td>
+                    `;
+                    fileList.appendChild(tr);
+                });
+            }
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return 'file-image';
+            if(['pdf'].includes(ext)) return 'file-text';
+            if(['md', 'txt', 'json', 'sql', 'php', 'js', 'html'].includes(ext)) return 'file-code';
+            return 'file';
+        }
+
+        // Preview File stored inside DB
+        function previewFileFromDB(fileId) {
+            const file = dbState.files.find(f => f.id === fileId);
+            if(!file) return;
+
+            document.getElementById("preview-modal-title").innerText = file.filename;
+            document.getElementById("preview-modal-meta").innerText = `Size: ${file.size_kb} KB • Modified: ${file.modified_date}`;
+            document.getElementById("preview-modal-mime").innerText = `MIME Type: ${file.mime_type || 'application/octet-stream'}`;
+            document.getElementById("btn-modal-download").onclick = () => downloadFileFromDB(file.id);
+
+            const body = document.getElementById("preview-modal-body");
+            body.innerHTML = "";
+
+            if(!file.file_data) {
+                body.innerHTML = `
+                    <div class="text-center p-8 text-slate-400">
+                        <i data-lucide="file-question" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                        <p class="font-bold text-slate-200">No Binary Payload Stored</p>
+                        <p class="text-xs text-slate-500 mt-1">This record only contains metadata. Upload a real file to view binary content.</p>
+                    </div>
+                `;
+            } else {
+                const dataUrl = file.file_data;
+                const mime = file.mime_type || '';
+
+                if(mime.startsWith('image/') || dataUrl.startsWith('data:image/')) {
+                    body.innerHTML = `<img src="${dataUrl}" class="max-h-96 max-w-full rounded-xl border border-slate-800 object-contain shadow-lg" />`;
+                } else if(mime.includes('markdown') || file.filename.endsWith('.md')) {
+                    const rawText = atob(dataUrl.split(',')[1] || '');
+                    const htmlContent = marked.parse(rawText);
+                    body.innerHTML = `<div class="prose-dark w-full p-4 bg-slate-900 border border-slate-800 rounded-xl overflow-y-auto max-h-96 text-xs">${htmlContent}</div>`;
+                } else if(mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || file.filename.match(/\.(txt|json|sql|php|js|html|css)$/i)) {
+                    const rawText = atob(dataUrl.split(',')[1] || '');
+                    body.innerHTML = `<pre class="w-full p-4 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto text-xs font-mono text-brand-300 max-h-96">${escapeHtml(rawText)}</pre>`;
+                } else if(mime.includes('pdf') || file.filename.endsWith('.pdf')) {
+                    body.innerHTML = `<iframe src="${dataUrl}" class="w-full h-96 rounded-xl border border-slate-800"></iframe>`;
+                } else {
+                    body.innerHTML = `
+                        <div class="text-center p-8 text-slate-300">
+                            <i data-lucide="file-binary" class="w-12 h-12 mx-auto mb-2 text-brand-400"></i>
+                            <p class="font-bold text-slate-100">Binary Stream Ready in SQLite</p>
+                            <p class="text-xs text-slate-400 mt-1 mb-4">Direct preview is not available for this MIME type (${mime}).</p>
+                            <button onclick="downloadFileFromDB(${file.id})" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl text-xs transition-all shadow-md">Download File Payload</button>
+                        </div>
+                    `;
+                }
+            }
+
+            document.getElementById("modal-preview").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        // Direct Download File from DB Data URL
+        function downloadFileFromDB(fileId) {
+            const file = dbState.files.find(f => f.id === fileId);
+            if(!file) return;
+
+            if(!file.file_data) {
+                showToast("No binary file content stored in database record.");
+                return;
+            }
+
+            const a = document.createElement("a");
+            a.href = file.file_data;
+            a.download = file.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            showToast(`Downloaded '${file.filename}' from SQLite DB`);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function renderInboxSorter() {
+            const container = document.getElementById("inbox-items-container");
+            container.innerHTML = "";
+
+            const inboxFiles = dbState.files.filter(f => f.category_id === 5);
+
+            if(inboxFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-400 border border-slate-800 rounded-2xl bg-slate-900/40">
+                        <i data-lucide="check-circle-2" class="w-10 h-10 mx-auto mb-2 text-emerald-400 opacity-80"></i>
+                        <p class="font-bold text-slate-200 text-sm">05_Inbox_Temp Clean & Sorted!</p>
+                        <p class="text-xs text-slate-500">All pending incoming items sorted into database categories.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const targetCategories = dbState.categories.filter(c => c.parent_id === null && c.id !== 5);
+
+            inboxFiles.forEach(file => {
+                const card = document.createElement("div");
+                card.className = "p-4 glass-panel rounded-2xl border border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4";
+
+                let targetOptions = targetCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <i data-lucide="${getFileIcon(file.filename)}" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-slate-100 font-mono cursor-pointer hover:text-brand-400" onclick="previewFileFromDB(${file.id})">${file.filename}</h4>
+                            <p class="text-[10px] text-slate-400 font-mono">Date: ${file.modified_date} • Size: ${file.size_kb} KB</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button onclick="previewFileFromDB(${file.id})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-mono">Preview</button>
+                        <select id="move-select-${file.id}" class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono">
+                            ${targetOptions}
+                        </select>
+                        <button onclick="moveInboxFile(${file.id})" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-medium transition-colors flex items-center space-x-1">
+                            <i data-lucide="folder-output" class="w-3.5 h-3.5"></i>
+                            <span>Move Item</span>
+                        </button>
+                        <button onclick="deleteFileRecord(${file.id})" class="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-colors" title="Delete">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function moveInboxFile(fileId) {
+            const targetCatId = parseInt(document.getElementById(`move-select-${fileId}`).value);
+            const file = dbState.files.find(f => f.id === fileId);
+            const targetCat = dbState.categories.find(c => c.id === targetCatId);
+
+            if(file && targetCat) {
+                file.category_id = targetCatId;
+                
+                dbState.backup_logs.unshift({
+                    id: Date.now(),
+                    action: `MOVE_FILE_ID_${fileId}_TO_CAT_${targetCatId}`,
+                    status: "SUCCESS",
+                    log_time: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                });
+
+                saveDBState();
+                renderAll();
+                showToast(`Moved to ${targetCat.name}`);
+            }
+        }
+
+        function clearAllInbox() {
+            if(confirm("Remove all temp records in 05_Inbox_Temp?")) {
+                dbState.files = dbState.files.filter(f => f.category_id !== 5);
+                saveDBState();
+                renderAll();
+                showToast("Inbox database records cleared.");
+            }
+        }
+
+        function triggerSimulatedDownload() {
+            const sampleText = "Emi Yazaki Automated Maintenance Engine Sample Content.\nDate: " + new Date().toISOString();
+            const dataUrl = "data:text/plain;base64," + btoa(sampleText);
+
+            const newFile = {
+                id: Date.now(),
+                category_id: 5,
+                filename: `2026-10-12_Sample_Note_v1.0.txt`,
+                mime_type: "text/plain",
+                size_kb: 1,
+                tags: "sample,inbox",
+                modified_date: new Date().toISOString().split('T')[0],
+                file_data: dataUrl
+            };
+
+            dbState.files.push(newFile);
+            saveDBState();
+            renderAll();
+            showToast("Sample text file stored in 05_Inbox_Temp!");
+        }
+
+        function setDefaultNamerDate() {
+            const dateInput = document.getElementById("namer-date");
+            if(dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        function updateNamerPreview() {
+            const date = document.getElementById("namer-date").value || new Date().toISOString().split('T')[0];
+            let proj = document.getElementById("namer-project").value.replace(/\s+/g, '') || "ProjectName";
+            let desc = document.getElementById("namer-desc").value.replace(/\s+/g, '') || "Description";
+            let ver = document.getElementById("namer-version").value || "1.0";
+            let ext = document.getElementById("namer-ext").value;
+
+            if(!ver.startsWith("v")) ver = "v" + ver;
+
+            const formatted = `${date}_${proj}_${desc}_${ver}${ext}`;
+            const output = document.getElementById("namer-output");
+            if(output) output.innerText = formatted;
+        }
+
+        function openNewFileModalWithStandard() {
+            openNewFileModal();
+            document.getElementById("modal-file-name").value = document.getElementById("namer-output").innerText;
+        }
+
+        function setQueryPreset(queryStr) {
+            document.getElementById("sql-query-input").value = queryStr;
+            executeUserSQL();
+        }
+
+        function executeUserSQL() {
+            const query = document.getElementById("sql-query-input").value.trim();
+            const head = document.getElementById("sql-table-head");
+            const body = document.getElementById("sql-table-body");
+            const timeLabel = document.getElementById("sql-exec-time");
+
+            const startTime = performance.now();
+
+            if(!query) return;
+
+            try {
+                if(query.toUpperCase().includes("FILES")) {
+                    // Map files and truncate large file_data for display
+                    const filesClean = dbState.files.map(f => ({
+                        id: f.id,
+                        category_id: f.category_id,
+                        filename: f.filename,
+                        mime_type: f.mime_type || 'text/plain',
+                        size_kb: f.size_kb,
+                        file_data: f.file_data ? f.file_data.substring(0, 30) + "..." : 'NULL'
+                    }));
+                    renderSQLResults(filesClean);
+                } else if(query.toUpperCase().includes("CATEGORIES")) {
+                    renderSQLResults(dbState.categories);
+                } else if(query.toUpperCase().includes("BACKUP_LOGS")) {
+                    renderSQLResults(dbState.backup_logs);
+                } else {
+                    renderSQLResults(dbState.files.slice(0, 5));
+                }
+            } catch(e) {
+                head.innerHTML = `<tr><th class="p-2 text-rose-400">SQL Error</th></tr>`;
+                body.innerHTML = `<tr><td class="p-2 text-rose-300">${e.message}</td></tr>`;
+            }
+
+            const duration = (performance.now() - startTime).toFixed(2);
+            timeLabel.innerText = `${duration} ms`;
+        }
+
+        function renderSQLResults(dataArray) {
+            const head = document.getElementById("sql-table-head");
+            const body = document.getElementById("sql-table-body");
+            head.innerHTML = "";
+            body.innerHTML = "";
+
+            if(!dataArray || dataArray.length === 0) {
+                body.innerHTML = `<tr><td class="p-2 text-slate-500">Query returned 0 rows.</td></tr>`;
+                return;
+            }
+
+            const keys = Object.keys(dataArray[0]);
+            let headRow = "<tr>";
+            keys.forEach(k => headRow += `<th class="p-2 font-mono">${k}</th>`);
+            headRow += "</tr>";
+            head.innerHTML = headRow;
+
+            dataArray.forEach(row => {
+                let tr = "<tr class='hover:bg-slate-900'>";
+                keys.forEach(k => tr += `<td class="p-2 font-mono text-slate-300 truncate max-w-xs">${row[k]}</td>`);
+                tr += "</tr>";
+                body.innerHTML += tr;
+            });
+        }
+
+        function loadPHPCodeView(key) {
+            const tabs = ['schema', 'db', 'upload', 'download', 'files'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`code-tab-${t}`);
+                if(btn) {
+                    btn.classList.remove('bg-brand-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-400');
+                }
+            });
+
+            const activeBtn = document.getElementById(`code-tab-${key}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-brand-600', 'text-white');
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+            }
+
+            document.getElementById("code-display").innerText = PHP_SOURCE_CODE[key] || "";
+        }
+
+        // Modals & Upload Functions
+        function openNewFileModal() {
+            const select = document.getElementById("modal-file-folder");
+            select.innerHTML = dbState.categories.map(c => `<option value="${c.id}" ${c.id === dbState.activeCategoryId ? 'selected' : ''}>${c.name}</option>`).join("");
+            document.getElementById("modal-file-name").value = "";
+            document.getElementById("modal-file-binary").value = "";
+            tempUploadFileData = null;
+            document.getElementById("modal-file").classList.remove("hidden");
+        }
+
+        function openNewFolderModal() {
+            const select = document.getElementById("modal-folder-parent");
+            select.innerHTML = dbState.categories.filter(c => c.parent_id === null).map(c => `<option value="${c.id}" ${c.id === dbState.activeCategoryId ? 'selected' : ''}>${c.name}</option>`).join("");
+            document.getElementById("modal-folder").classList.remove("hidden");
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add("hidden");
+        }
+
+        function onFilePickedForUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            if(!document.getElementById("modal-file-name").value) {
+                document.getElementById("modal-file-name").value = file.name;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempUploadFileData = {
+                    dataUrl: e.target.result,
+                    mime: file.type || 'application/octet-stream',
+                    sizeKb: Math.round(file.size / 1024) || 1
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveNewUploadedFile() {
+            const category_id = parseInt(document.getElementById("modal-file-folder").value);
+            const filename = document.getElementById("modal-file-name").value.trim();
+            const tags = document.getElementById("modal-file-tags").value || "upload";
+
+            if(!filename) {
+                alert("Filename is required.");
+                return;
+            }
+
+            const file_data = tempUploadFileData ? tempUploadFileData.dataUrl : null;
+            const mime_type = tempUploadFileData ? tempUploadFileData.mime : 'application/octet-stream';
+            const size_kb = tempUploadFileData ? tempUploadFileData.sizeKb : 10;
+
+            dbState.files.push({
+                id: Date.now(),
+                category_id,
+                filename,
+                mime_type,
+                size_kb,
+                tags,
+                file_data,
+                modified_date: new Date().toISOString().split('T')[0]
+            });
+
+            saveDBState();
+            closeModal("modal-file");
+            renderAll();
+            showToast("Binary file stored in SQLite database!");
+        }
+
+        function saveNewFolder() {
+            const parent_id = parseInt(document.getElementById("modal-folder-parent").value);
+            const name = document.getElementById("modal-folder-name").value.trim();
+
+            if(!name) return;
+
+            dbState.categories.push({
+                id: Date.now(),
+                name,
+                description: "Subcategory folder",
+                icon: "folder",
+                parent_id
+            });
+
+            saveDBState();
+            closeModal("modal-folder");
+            renderAll();
+            showToast("Subcategory created!");
+        }
+
+        function deleteFileRecord(fileId) {
+            dbState.files = dbState.files.filter(f => f.id !== fileId);
+            saveDBState();
+            renderAll();
+            showToast("Database record deleted.");
+        }
+
+        function handleGlobalSearch(query) {
+            const box = document.getElementById("search-results");
+            if(!query.trim()) {
+                box.classList.add("hidden");
+                return;
+            }
+
+            const q = query.toLowerCase();
+            const matching = dbState.files.filter(f => f.filename.toLowerCase().includes(q) || f.tags.toLowerCase().includes(q));
+
+            box.innerHTML = "";
+            if(matching.length === 0) {
+                box.innerHTML = `<p class="text-xs text-slate-500 p-2 font-mono">No database records found</p>`;
+            } else {
+                matching.forEach(f => {
+                    const cat = dbState.categories.find(c => c.id === f.category_id);
+                    const item = document.createElement("div");
+                    item.className = "p-2 hover:bg-slate-800 rounded-lg cursor-pointer text-xs space-y-0.5 font-mono";
+                    item.onclick = () => {
+                        dbState.activeCategoryId = f.category_id;
+                        switchTab('explorer');
+                        box.classList.add("hidden");
+                        previewFileFromDB(f.id);
+                    };
+                    item.innerHTML = `
+                        <div class="font-medium text-slate-200 truncate flex justify-between">
+                            <span>${f.filename}</span>
+                            <span class="text-brand-400">View</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">Folder: ${cat ? cat.name : 'Unknown'}</div>
+                    `;
+                    box.appendChild(item);
+                });
+            }
+            box.classList.remove("hidden");
+        }
+
+        // Backup Audit & SQL Export
+        function renderBackupAuditLogs() {
+            const container = document.getElementById("backup-audit-logs");
+            container.innerHTML = "";
+            dbState.backup_logs.forEach(log => {
+                const item = document.createElement("div");
+                item.className = "p-2 rounded-lg bg-slate-950 border border-slate-800 flex justify-between items-center";
+                item.innerHTML = `
+                    <span class="text-slate-300">[${log.log_time}] ${log.action}</span>
+                    <span class="text-emerald-400 font-bold">${log.status}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function triggerDatabaseDump() {
+            dbState.backup_logs.unshift({
+                id: Date.now(),
+                action: "COLD_SNAPSHOT_TRIGGER",
+                status: "SUCCESS",
+                log_time: new Date().toISOString().replace('T', ' ').substring(0, 19)
+            });
+            document.getElementById("cold-vault-status").innerText = "Snapshot Clean";
+            saveDBState();
+            renderAll();
+            showToast("Database cold snapshot log created.");
+        }
+
+        function downloadSQLDump() {
+            let sqlDump = `-- SQLite Dump for Emi Yazaki File Maintenance System\n`;
+            sqlDump += `-- Exported on ${new Date().toISOString()}\n\n`;
+            sqlDump += PHP_SOURCE_CODE.schema + "\n\n";
+
+            dbState.categories.forEach(c => {
+                sqlDump += `INSERT INTO categories (id, name, description, parent_id) VALUES (${c.id}, '${c.name}', '${c.description}', ${c.parent_id || 'NULL'});\n`;
+            });
+
+            dbState.files.forEach(f => {
+                const safeData = f.file_data ? `'${f.file_data}'` : 'NULL';
+                sqlDump += `INSERT INTO files (id, category_id, filename, mime_type, size_kb, tags, file_data, modified_date) VALUES (${f.id}, ${f.category_id}, '${f.filename}', '${f.mime_type || ''}', ${f.size_kb}, '${f.tags}', ${safeData}, '${f.modified_date}');\n`;
+            });
+
+            const dataStr = "data:text/sql;charset=utf-8," + encodeURIComponent(sqlDump);
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `EmiYazaki_SQLite_Dump_${new Date().toISOString().split('T')[0]}.sql`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast("SQLite .SQL Dump Downloaded.");
+        }
+
+        // Drag & Drop
+        function setupDragAndDrop() {
+            const zone = document.getElementById("drop-zone");
+            zone.addEventListener("click", () => document.getElementById("file-input-upload").click());
+            
+            zone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                zone.classList.add("border-brand-500");
+            });
+
+            zone.addEventListener("dragleave", () => zone.classList.remove("border-brand-500"));
+
+            zone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                zone.classList.remove("border-brand-500");
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+        }
+
+        function handleFileUpload(e) {
+            if(e.target.files.length) {
+                handleFiles(e.target.files);
+            }
+        }
+
+        function handleFiles(filesList) {
+            Array.from(filesList).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    dbState.files.push({
+                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        category_id: 5,
+                        filename: file.name,
+                        mime_type: file.type || 'application/octet-stream',
+                        size_kb: Math.round(file.size / 1024) || 1,
+                        tags: "upload,inbox",
+                        modified_date: new Date().toISOString().split('T')[0],
+                        file_data: evt.target.result
+                    });
+                    saveDBState();
+                    renderAll();
+                };
+                reader.readAsDataURL(file);
+            });
+            showToast(`Uploaded ${filesList.length} file payload(s) into SQLite inbox.`);
+        }
+
+        function copyToClipboard(text) {
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+            showToast("Copied to clipboard!");
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            document.getElementById("toast-message").innerText = message;
+            toast.classList.remove("translate-y-10", "opacity-0");
+            setTimeout(() => {
+                toast.classList.add("translate-y-10", "opacity-0");
+            }, 3000);
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle("dark");
+        }
+    </script>
+</body>
+</html>

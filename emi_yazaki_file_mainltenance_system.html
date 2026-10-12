@@ -133,7 +133,7 @@
         <!-- Sidebar -->
         <button id="mobile-nav-backdrop" onclick="closeMobileNav()" class="hidden fixed inset-0 bg-slate-950/70 z-30 md:hidden" aria-label="Close navigation menu"></button>
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] -translate-x-full transition-transform duration-200 bg-slate-950 text-slate-300 flex flex-col justify-between flex-shrink-0 border-r border-slate-800/80 md:relative md:inset-auto md:z-20 md:w-64 md:max-w-none md:translate-x-0">
-            <div>
+            <div class="min-h-0 flex flex-1 flex-col">
                 <!-- User Profile / App Header -->
                 <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -151,7 +151,7 @@
                 </div>
 
                 <!-- Navigation Tabs -->
-                <nav class="p-3 space-y-1">
+                <nav class="min-h-0 flex-1 overflow-y-auto p-3 space-y-1">
                     <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-white bg-brand-600 shadow-lg shadow-brand-600/30">
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                         <span>System Dashboard</span>

@@ -66,10 +66,39 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
         }
-        .light .glass-panel {
-            background: rgba(255, 255, 255, 0.8);
+        html.light {
+            color-scheme: light;
+        }
+        html.light body {
+            background: linear-gradient(180deg, #edf4ff 0%, #f8fafc 100%);
+            color: #0f172a;
+        }
+        html.light .glass-panel {
+            background: rgba(255, 255, 255, 0.82);
+            border-color: rgba(148, 163, 184, 0.35);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+        }
+        html.light .bg-slate-950,
+        html.light .bg-slate-900,
+        html.light .bg-slate-800,
+        html.light .bg-slate-700,
+        html.light .bg-darkbg,
+        html.light .bg-slate-900\/40,
+        html.light .bg-slate-950\/80 {
+            background-color: #f8fafc !important;
+        }
+        html.light .text-slate-100,
+        html.light .text-slate-200,
+        html.light .text-slate-300,
+        html.light .text-slate-400,
+        html.light .text-slate-500 {
+            color: #1e293b !important;
+        }
+        html.light .border-slate-800,
+        html.light .border-slate-700,
+        html.light .border-slate-900 {
+            border-color: rgba(148, 163, 184, 0.45) !important;
         }
         .prose-dark {
             color: #cbd5e1;
@@ -163,7 +192,7 @@
                 </div>
 
                 <div class="flex items-center justify-between pt-1">
-                    <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors" title="Toggle Theme">
+                    <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors" title="Toggle Theme" aria-label="Toggle day/night mode">
                         <i data-lucide="sun" id="theme-icon-light" class="w-4 h-4 hidden"></i>
                         <i data-lucide="moon" id="theme-icon-dark" class="w-4 h-4"></i>
                     </button>
@@ -959,7 +988,31 @@ echo json_encode($stmt->fetchAll());`
         let dbState = JSON.parse(localStorage.getItem("emi_sqlite_db_state")) || INITIAL_DB_STATE;
         let tempUploadFileData = null;
 
+        const THEME_STORAGE_KEY = "emi_sqlite_theme";
+
+        function applyTheme(themeName) {
+            const isLight = themeName === 'light';
+            document.documentElement.classList.toggle('light', isLight);
+            document.documentElement.classList.toggle('dark', !isLight);
+            document.body.classList.toggle('light', isLight);
+            document.body.classList.toggle('dark', !isLight);
+
+            const lightIcon = document.getElementById('theme-icon-light');
+            const darkIcon = document.getElementById('theme-icon-dark');
+            if (lightIcon) lightIcon.classList.toggle('hidden', !isLight);
+            if (darkIcon) darkIcon.classList.toggle('hidden', isLight);
+
+            localStorage.setItem(THEME_STORAGE_KEY, themeName);
+        }
+
+        function toggleDarkMode() {
+            const nextTheme = document.documentElement.classList.contains('light') ? 'dark' : 'light';
+            applyTheme(nextTheme);
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
+            const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+            applyTheme(savedTheme);
             saveDBState();
             lucide.createIcons();
             setDefaultNamerDate();
@@ -1760,9 +1813,6 @@ echo json_encode($stmt->fetchAll());`
             }, 3000);
         }
 
-        function toggleDarkMode() {
-            document.documentElement.classList.toggle("dark");
-        }
     </script>
 </body>
 </html>

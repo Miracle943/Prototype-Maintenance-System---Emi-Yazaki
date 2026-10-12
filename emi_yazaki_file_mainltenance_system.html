@@ -100,7 +100,7 @@
         html.light .border-slate-900 {
             border-color: rgba(148, 163, 184, 0.45) !important;
         }
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
             html, body {
                 min-height: 100%;
                 height: 100%;
@@ -108,6 +108,43 @@
             #app {
                 height: 100dvh;
                 min-height: 100dvh;
+            }
+            #sidebar {
+                position: fixed !important;
+                inset: 0 auto 0 0 !important;
+                z-index: 40 !important;
+                width: min(18rem, 85vw) !important;
+                max-width: 85vw !important;
+                transform: translateX(-100%) !important;
+            }
+            #sidebar.mobile-nav-open {
+                transform: translateX(0) !important;
+            }
+            #mobile-nav-toggle {
+                display: inline-flex !important;
+            }
+            #mobile-nav-backdrop {
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 30 !important;
+                display: none !important;
+            }
+            #mobile-nav-backdrop.mobile-nav-open {
+                display: block !important;
+            }
+            main {
+                width: 100%;
+                min-width: 0;
+                flex: 1 1 auto;
+            }
+            header {
+                height: auto !important;
+                min-height: 4rem;
+                padding: 0.75rem;
+                flex-wrap: wrap !important;
+            }
+            header > div:last-child {
+                width: 100% !important;
             }
             #view-container {
                 overscroll-behavior: contain;
@@ -1062,15 +1099,19 @@ echo json_encode($stmt->fetchAll());`
             const sidebar = document.getElementById('sidebar');
             const backdrop = document.getElementById('mobile-nav-backdrop');
             const toggle = document.getElementById('mobile-nav-toggle');
-            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            const shouldOpen = toggle.getAttribute('aria-expanded') !== 'true';
 
-            sidebar.classList.toggle('-translate-x-full', isOpen);
-            backdrop.classList.toggle('hidden', isOpen);
-            toggle.setAttribute('aria-expanded', String(!isOpen));
+            sidebar.classList.toggle('mobile-nav-open', shouldOpen);
+            sidebar.classList.toggle('-translate-x-full', !shouldOpen);
+            backdrop.classList.toggle('mobile-nav-open', shouldOpen);
+            backdrop.classList.toggle('hidden', !shouldOpen);
+            toggle.setAttribute('aria-expanded', String(shouldOpen));
         }
 
         function closeMobileNav() {
+            document.getElementById('sidebar').classList.remove('mobile-nav-open');
             document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('mobile-nav-backdrop').classList.remove('mobile-nav-open');
             document.getElementById('mobile-nav-backdrop').classList.add('hidden');
             document.getElementById('mobile-nav-toggle').setAttribute('aria-expanded', 'false');
         }
